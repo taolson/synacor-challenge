@@ -1,0 +1,111 @@
+|| Synacor challenge virtual machine evaluator
+
+
+%import <base>
+%import <dequeue>
+%import <io>            (>>=.)/io_bind (>>.)/io_right
+%import <lens>
+%import <maybe>
+%import <maybeState>    (>>=)/mst_bind (<$>)/mst_fmap (<<)/mst_left (>>)/mst_right
+%import <vector>
+%import "arch"
+
+
+|| execution result status
+status ::= Halted | ReqIn | ReqOut (dequeue char)
+
+cmpstatus = undef       || don't derive cmpstatus because dequeue doesn't export cmp
+
+boolVal :: bool -> int
+boolVal False = 0
+boolVal True  = 1
+
+|| eval helpers for common patterns
+evalRO  op r a   = i16_fmap op <$> readOpr a >>= writeReg r >> run
+evalROO op r a b = mst_liftA2 (i16_liftA2 op) (readOpr a) (readOpr b) >>= writeReg r >> run
+evalJmp a        = readOpr a >>= setPC >> run where setPC (Int16 a) = vm_set vm_pc a
+
+evalJmpc :: (int -> bool) -> opr -> opr -> maybeState vmSt status
+evalJmpc p a b
+    = mst_bind2 (readOpr a) (readOpr b) go
+      where
+        go (Int16 a) (Int16 b)
+            = vm_set vm_pc b >> run, if p a
+            = run,                   otherwise
+
+evalOut :: char -> maybeState vmSt status
+evalOut '\n' = ReqOut <$> vm_view vm_out                || request output for full line
+evalOut c    = vm_over vm_out (dq_addR c) >> run        || add char to output queue
+
+evalIn :: reg -> maybeState vmSt status
+evalIn r
+    = vm_view vm_inp >>= check
+      where
+        check []       = vm_over vm_pc (subtract 2) >> mst_pure ReqIn                   || empty input buffer -- revert pc to inp insn and request more input
+        check (c : cs) = writeReg r (Int16 . code $ c) >> vm_set vm_inp cs >> run       || read a character from buffered inp
+
+run :: maybeState vmSt status
+run = decodeInsn >>= eval
+      where
+        eval Halt         = mst_pure Halted
+        eval (Set r a)    = evalRO id r a
+        eval (Push a)     = readOpr a >>= pushStk >> run
+        eval (Pop r)      = popStk >>= writeReg r >> run
+        eval (Eq r a b)   = evalROO eq r a b where eq a b = boolVal $ a == b
+        eval (Gt r a b)   = evalROO gt r a b where gt a b = boolVal $ a > b
+        eval (Jmp a)      = evalJmp a
+        eval (Jt a b)     = evalJmpc (~= 0) a b
+        eval (Jf a b)     = evalJmpc (== 0) a b
+        eval (Add r a b)  = evalROO (+) r a b
+        eval (Mult r a b) = evalROO (*) r a b
+        eval (Mod r a b)  = evalROO mod r a b
+        eval (And r a b)  = evalROO (.&.) r a b
+        eval (Or r a b)   = evalROO (.|.) r a b
+        eval (Not r a)    = evalRO complement r a
+        eval (Rmem r a)   = readOpr a >>= readMem >>= writeReg r >> run
+        eval (Wmem a x)   = mst_bind2 (readOpr a) (readOpr x) writeMem >> run
+        eval (Call a)     = vm_view vm_pc >>= (pushStk . Int16) >> evalJmp a
+        eval Ret          = popStk >>= setPC >> run where setPC (Int16 a) = vm_set vm_pc a
+        eval (Out a)      = readOpc a >>= evalOut
+        eval (In r)       = evalIn r
+        eval Nop          = run
+        eval (Word x)     = mst_fail
+
+runVM :: vmSt -> io ()
+runVM st
+    = doIO $ mst_runState run st
+      where
+        doIO (Nothing,     st') = putStrLn ("Error occurred at " ++ showint (view vm_pc st'))
+        doIO (Just status, st')
+            = case status of
+                  Halted   -> doHalt st'
+                  ReqIn    -> doInput st'
+                  ReqOut q -> putStrLn (dq_toList q) >>. runVM (set vm_out dq_empty st')
+
+        doHalt st = putStrLn ("Halted at " ++ showint (view vm_pc st))
+
+        doInput st
+            = getLine >>=. checkInput
+              where
+                checkInput []          = doHalt st
+                checkInput ('`' : cmd) = doCmd st $ words cmd
+                checkInput s           = runVM (set vm_inp (s ++ "\n") st)
+
+        doCmd st (cmd : args)
+            = go cmd $ map numval args
+              where
+                go "set-register" [r, n] = doInput $ mst_execState (writeReg (Reg r) (Int16 n)) st
+                go "set-memory"   [a, n] = doInput $ mst_execState (writeMem (Int16 a) (Int16 n)) st
+                go _              _      = error ("doCmd: unrecognized command: " ++ cmd)
+
+        doCmd _ _ = error "doCmd: bad command"
+
+main :: io ()
+main
+    = getArgs >>=. checkArgs
+      where
+        mregs      = Int16 0 |> v_rep 8 |> v_unsafeThaw
+        initSt mem = (0, mregs, [], mem, [], dq_empty)
+
+        checkArgs [fn] = readFile fn >>=. (makeMemory .> initSt .> runVM)
+        checkArgs _    = errStrLn "usage: vm <synacor binary file name>"

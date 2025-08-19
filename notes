@@ -1,0 +1,524 @@
+==== adventure map ====
+Foothills
+	doorway -> Dark cave
+
+Dark cave 1
+	north -> Dark cave 2
+	south -> Foothills
+
+Dark cave 2	(narrow, light from doorway south is dim)
+	north -> Dark cave 3
+	south -> Dark cave 1
+	
+Dark cave 3	(ledge above chasm, rope bridge)
+	bridge -> Rope Bridge
+	south -> Dark cave 2
+
+Rope bridge
+	continue -> Chasm
+	back -> Dark cave 3
+
+Chasm (fall from bridge)
+	down -> Moss cavern
+
+Moss cavern
+	east -> Moss caven 2
+	west -> Moss cavern 3
+
+Moss cavern 2 (empty lantern out of oil)
+	west -> Moss cavern
+
+Moss cavern 3
+	east -> Moss cavern
+	passage -> Passage
+
+Passage
+	cavern -> Moss cavern 3
+	ladder -> Twisty passages
+	darkness -> Passage2
+
+Passage 2 (pitch black, could be eaten by grue)
+	continue -> Dark Passage
+	back -> Passage
+
+Dark Passage
+	west -> Dark Passage 2
+	east -> Passage 2
+
+Dark Passage 2
+	east -> Dark Passage
+	west -> Dark Passage 3
+
+Dark Passage 3
+	east -> 
+	west -> Dark Passage 4
+
+Dark Passage 4 (vegetation to the west)
+	east -> Dark Passage 3
+	west -> Ruins
+
+Ruins
+	east -> Dark Passage 4
+	north -> Ruins 2
+
+Ruins 2 foyer (red coin 2 dots)
+	north -> Ruins 3
+	south -> Ruins
+
+Ruins 3 (central hall) _ + _ * _^2 + _^3 - _ = 399
+	north -> door is locked, unlocked when use coins in order 9 2 5 7 3 -> Ruins 8
+	south -> Ruins 2
+	east -> Ruins 4
+	west -> Ruins 5
+
+Ruins 4 (dining hall) (concave coin 7 dots)
+	down -> Ruins 6
+	west -> Ruins 3
+
+Ruins 5 (living quarters) (blue coin 9 dots)
+	up -> Ruins 7
+	east -> Ruins 3
+
+Ruins 6 (kitchen) (corroded coin triangle on side = 3)
+	up -> Ruins 4
+
+Ruins 7 (throne room) (shiny coin pentagon on side = 5)
+	down -> Ruins 5
+
+Ruins 8 -> murals & stones (teleporter)
+	south ->
+	using teleporter -> Synacor HQ [otbDkearRxag]
+
+Synacor HQ (bookshelf) (business card, strange book)
+	outside ->
+Fumbling
+	forward -> Fumbling2
+	back -> Fumbling 2
+
+Fumbling2 (growling in distance)
+	run -> Panicked
+	investigate -> Panicked
+
+Panicked (growling louder)
+	run -> Dead (eaten by grue)
+	wait -> Dead (eaten by grue)
+	hide
+
+Twisty 1
+	ladder -> Passage
+	north -> Twisty 2
+	south -> Twisty 3
+	east -> Twisty 4
+	west -> Twisty 5
+
+Twisty 2
+	north -> Twisty 3
+	south -> Twisty 1
+	west -> Twisty 2
+
+Twisty 3
+	north -> Twisty 1
+	south -> Twisty 2
+	east  -> Twisty 3
+
+Twisty 4 (hear a grue)
+	north -> Twisty 9
+	south -> Twisty 10
+	east -> Fumbling
+	west -> Twisty 1
+
+Twisty 5
+       north -> Twisty 6
+       south -> Twisty 7
+       east -> Twisty 1
+
+Twisty 6
+       north -> Twisty 11
+       south -> Twisty 7
+       east -> Twisty 1
+
+Twisty 7 (likely eaten by grue)
+       north -> Twisty 11
+       south -> Twisty 2
+       west -> Twisty 3
+       east -> Twisty 12
+
+Twisty 9 (passages, all little)
+	north -> Twisty 3
+	east -> Twisty 2
+	south -> Twisty 9
+
+Twisty 10 (east looks dark, think you hear a grue)
+	north -> Twisty 9
+	south -> Twisty 10
+	west -> Twisty 1
+	east -> Twisty 12
+
+Twisty 11 (kWwVPpCQivdv chiseled on wall), can of oil for lantern
+	west -> Twisty 1
+
+Twisty 12
+	north -> Twisty 3
+	south -> Twisty 2
+
+
+looking at the strange book in the lobby of Synacor HQ shows:
+
+----
+The cover of this book subtly swirls with colors.  It is titled "A Brief Introduction to Interdimensional Physics".  It reads:
+
+Recent advances in interdimensional physics have produced fascinating
+predictions about the fundamentals of our universe!  For example,
+interdimensional physics seems to predict that the universe is, at its root, a
+purely mathematical construct, and that all events are caused by the
+interactions between eight pockets of energy called "registers".
+Furthermore, it seems that while the lower registers primarily control mundane
+things like sound and light, the highest register (the so-called "eighth
+register") is used to control interdimensional events such as teleportation.
+
+A hypothetical such teleportation device would need to have have exactly two
+destinations.  One destination would be used when the eighth register is at its
+minimum energy level - this would be the default operation assuming the user
+has no way to control the eighth register.  In this situation, the teleporter
+should send the user to a preconfigured safe location as a default.
+
+The second destination, however, is predicted to require a very specific
+energy level in the eighth register.  The teleporter must take great care to
+confirm that this energy level is exactly correct before teleporting its user!
+If it is even slightly off, the user would (probably) arrive at the correct
+location, but would briefly experience anomalies in the fabric of reality
+itself - this is, of course, not recommended.  Any teleporter would need to test
+the energy level in the eighth register and abort teleportation if it is not
+exactly correct.
+
+This required precision implies that the confirmation mechanism would be very
+computationally expensive.  While this would likely not be an issue for large-
+scale teleporters, a hypothetical hand-held teleporter would take billions of
+years to compute the result and confirm that the eighth register is correct.
+
+If you find yourself trapped in an alternate dimension with nothing but a
+hand-held teleporter, you will need to extract the confirmation algorithm,
+reimplement it on more powerful hardware, and optimize it.  This should, at the
+very least, allow you to determine the value of the eighth register which would
+have been accepted by the teleporter's confirmation mechanism.
+
+Then, set the eighth register to this value, activate the teleporter, and
+bypass the confirmation mechanism.  If the eighth register is set correctly, no
+anomalies should be experienced, but beware - if it is set incorrectly, the
+now-bypassed confirmation mechanism will not protect you!
+----
+
+==== validation code ====
+read r7 = 42 pc = 6045
+
+5483	set	 r0  4 
+5486	set	 r1  1 
+5489	call	 6027 			<-- call to function validator
+5491	eq	 r1  r0  6 		<-- wants a "6" in r0?
+5495	jf	 r1  5579 
+
+validator()
+6027	jt	 r0  6035 
+6030	add	 r0  r1  1 
+6034	ret	
+	
+6035	jt	 r1  6048 
+6038	add	 r0  r0  32767 
+6042	set	 r1  r7			<- use of magic r7 value
+6045	call	 6027 
+6047	ret	
+	
+6048	push	 r0 
+6050	add	 r1  r1  32767 
+6054	call	 6027 
+	
+6056	set	 r1  r0 
+6059	pop	 r0 
+6061	add	 r0  r0  32767 
+6065	call	 6027 
+	
+6067	ret	
+	
+This is a modified Ackermann's function, starting with 4,1 and
+substituting the magic number for the '1' in the second leg of the
+standard Ackermann's function, and using modulo 32768 arithmetic.
+Currently running a "fast" version of the validator, trying succesive
+values starting from 0 to find on that returns 6.  Continuing on
+without the correct value by patching the validator routine with:
+     set r0 6
+     ret
+
+= 1 32768 6 18
+
+Validation is taking too long; looking at intermediate values to find a pattern.
+
+Ah, since we are on a machine running modulo 32768, then we only have 32768 possible ackermann values at each level
+
+A(0, n, x) = (n+1) % 32768 -- independent of x
+
+A(1, 0, x) = A(0, x, x)
+A(1, n, x) = A(0, A(1, n-1, x), x)
+
+A(2, 0, x) = A(1, x, x)
+A(2, n, x) = A(1, A(2, n-1, x), x)
+
+A(3, 0, x) = A(2, x, x)
+A(3, n, x) = A(2, A(3, n-1, x), x)
+
+A(4, 0, x) = A(3, 1, x)
+A(4, 1, x) = A(3, A(4, 0, x), x)
+
+
+
+=== adventure map, continued ===
+
+Beach (raining. message, but it is an invalid code on the website, so I
+probably don't have the correct magic register value).
+	west -> Beach 2
+	east -> Beach 1
+	north -> Tropical Island 1
+
+
+Beach 1
+	west -> Beach
+	north -> waterfall
+
+Beach 2 
+	east -> Beach
+	north -> Tropical Island 1
+
+waterfall
+	north -> Tropical Island 2
+	south -> Beach 1
+	west -> Tropical Island 1
+
+Tropical Island 1
+	north -> Tropical Island 2
+	south -> Beach
+	east -> waterfall
+
+Tropical Island 2 (embankments come together)
+	north -> Tropical Island 3
+	south -> Tropical Island 1
+
+Tropical Island 3 (narrow path)
+	 north -> Tropical Island 4 
+	 south -> Tropical Island 2
+
+Tropical Island 4 (sign with "Treasure Vault access")
+	 north -> Tropical Cave
+	 south -> Tropical Island 3
+
+Tropical Cave
+	north -> Tropical Cave 2
+	south -> Tropical Island 4
+
+Tropical Cave 2 (fireflys)
+	north -> Tropical Cave 3 
+	south -> Tropical Cave 2
+
+Tropical Cave 3 (small camp)
+	 north -> Tropical Cave 4
+	 south -> Tropical Cave 2
+	 east -> Tropical Cove Alcove
+
+Tropical Cave 4 (tunnel slopes)
+	north -> Vault Antechamber
+	south ->
+
+Tropical Cove Alcove (table, chair, broken lantern, journal)
+	west ->
+Vault Antechamber (22 carved on orb)
+	north -> Vault Lock 1
+	east -> Vault Lock 14
+	south -> Tropical Cave 4
+	
+Vault Lock 1 (+ symbol, green flash)
+	north -> Vault Lock 2
+	east -> Vault Lock 13
+	south -> Vault Antechamber
+
+Vault Lock 2 (4 symbol, green flash, orb heavier)
+	north -> Vault Lock 3
+	east -> Vault Lock 12
+	south -> Vault Lock 1
+
+Vault Lock 3 (* symbol, yellow, orb glows yellow)
+	east -> Vault Lock 4
+	south -> Vault Lock 2
+
+Vault Lock 4 (8 symbol, orb flashes yellow, orb heavier)
+	east -> Vault Lock 5
+	south -> Vault Lock 12
+	west -> Vault Lock 3
+
+Vault Lock 5 (- symbol, red flash, orb glows red)
+	east -> Vault Door
+	south -> Vault Lock 11
+	west -> Vault Lock 4
+
+Vault Door (1 on floor, orb flashes red, gets lighter, 30 carved in door, orb evaporates)
+	south -> Vault Lock 6
+	west -> Vault Lock 5
+	vault ->
+
+Vault Lock 6 (* on floor)
+	north -> Vault Door
+	south -> Vault Lock 7
+	west -> Vault Lock 11
+
+Vault Lock 7 (18 on floor)
+	north -> Vault Lock 6
+	south -> Vault Lock 8
+	west -> Vault Lock 10
+
+Vault Lock 8 (* symbol)
+	north -> Vault Lock 7
+	west -> Vault Lock 9
+
+Vault Lock 9 (9 on floor)
+	north -> Vault Lock 10
+	east ->
+	west -> Vault Lock 14
+
+Vault Lock 10 (- symbol on floor)
+	north -> Vault Lock 11
+	east -> Vault Lock 7
+	south -> Vault Lock 9
+	west -> Vault Lock 13
+
+Vault Lock 11 (11 on floor)
+	north -> Vault Lock 5
+	east -> Vault Lock 6
+	south -> Vault Lock 10
+	west -> Vault Lock 12
+
+Vault Lock 12 (* on floor)
+	north -> Vault Lock 4
+	east -> Vault Lock 11
+	south -> Vault Lock 13
+	west -> Vault Lock 2
+
+Vault Lock 13 (4 on floor)
+	north -> Vault Lock 12
+	east -> Vault Lock 10
+	south -> Vault Lock 14
+	west -> Vault Lock 1
+
+Vault Lock 14 (- on floor)
+	north -> Vault Lock 13
+	east -> Vault Lock 9
+	west -> Vault Antechamber
+
+---- Ok, it looks like the puzzle is to start with 22, then find the
+     path through the grid that creates the number 30 when we reach
+     the vault door.  Time to write another program!
+
+
+	VL3  *		VL4  8		VL5  -		VL15 1 (orb weight should be 30)
+
+
+	VL2  4		VL12 *		VL11 11		VL6  *
+
+
+	VL1  +		VL13 4		VL 10 -		VL7  18
+
+	^ green
+	VL0  22		VL14 -		VL9   9		VL8  *
+		->red
+
+orb shatters when weight <= 0 or > XX;  reappears at antechamber
+green indicates we will be adding (got +)
+red indicates we will be subtracting (got -)
+yellow indicates we will be multiplying (got *)
+
+solving with a breadth-first search:
+
+	n e e n w s e e w n n e
+
+
+
+
+Using the tablet in the teleporter room exposes a new code: VLOCMffZcQyp; now have 6/8
+
+codes found:
+	rtLgGcljJCQu	start vm running
+	VLOCMffZcQyp	use tablet
+	kWwVPpCQivdv	written on wall in twisty passages
+	otbDkearRxag	using teleporter first time to got to Synacor HQ (r7=0)
+	[different codes after using teleporter with r7 != 0, all invalid so far]
+	[found correct value for r7 = 25734]
+	xwfiRILGJYzm	using teleporter with r7=25734 to get to beach
+	WbMWUpXwTpTq	looking at mirror in vault (but bad code?)
+
+Journal in Tropical Cave 
+
+Day 1: We have reached what seems to be the final in a series of
+puzzles guarding an ancient treasure.  I suspect most adventurers give
+up long before this point, but we're so close!  We must press on!
+
+Day 1: P.S.: It's a good thing the island is tropical.  We should have
+food for weeks!
+
+Day 2: The vault appears to be sealed by a mysterious force - the door
+won't budge an inch.  We don't have the resources to blow it open, and
+I wouldn't risk damaging the contents even if we did.  We'll have to
+figure out the lock mechanism.
+
+Day 3: The door to the vault has a number carved into it.  Each room
+leading up to the vault has more numbers or symbols embedded in
+mosaics in the floors.  We even found a strange glass orb in the
+antechamber on a pedestal itself labeled with a number.  What could
+they mean?
+
+Day 5: We finally built up the courage to touch the strange orb in the
+antechamber.  It flashes colors as we carry it from room to room, and
+sometimes the symbols in the rooms flash colors as well.  It simply
+evaporates if we try to leave with it, but another appears on the
+pedestal in the antechamber shortly thereafter.  It also seems to do
+this even when we return with it to the antechamber from the other
+rooms.
+
+Day 8: When the orb is carried to the vault door, the numbers on the
+door flash black, and then the orb evaporates.  Did we do something
+wrong?  Doesn't the door like us?  We also found a small hourglass
+near the door, endlessly running.  Is it waiting for something?
+
+Day 13: Some of my crew swear the orb actually gets heaver or lighter
+as they walk around with it.  Is that even possible?  They say that if
+they walk through certain rooms repeatedly, they feel it getting
+lighter and lighter, but it eventually just evaporates and a new one
+appears as usual.
+
+Day 21: Now I can feel the orb changing weight as I walk around.  It
+depends on the area - the change is very subtle in some places, but
+certainly more noticeable in others, especially when I walk into a
+room with a larger number or out of a room marked '*'.  Perhaps we can
+actually control the weight of this mysterious orb?
+
+Day 34: One of the crewmembers was wandering the rooms today and
+claimed that the numbers on the door flashed white as he approached!
+He said the door still didn't open, but he noticed that the hourglass
+had run out and flashed black.  When we went to check on it, it was
+still running like it always does.  Perhaps he is going mad?  If not,
+which do we need to appease: the door or the hourglass?  Both?
+
+Day 55: The fireflies are getting suspicious.  One of them looked at
+me funny today and then flew off.  I think I saw another one blinking
+a little faster than usual.  Or was it a little slower?  We are
+getting better at controlling the weight of the orb, and we think
+that's what the numbers are all about.  The orb starts at the weight
+labeled on the pedestal, and goes down as we leave a room marked '-',
+up as we leave a room marked '+', and up even more as we leave a room
+marked '*'.  Entering rooms with larger numbers has a greater effect.
+
+Day 89: Every once in a great while, one of the crewmembers has the
+same story: that the door flashes white, the hourglass had already run
+out, it flashes black, and the orb evaporates.  Are we too slow?  We
+can't seem to find a way to make the orb's weight match what the door
+wants before the hourglass runs out.  If only we could find a shorter
+route through the rooms...
+
+Day 144: We are abandoning the mission.  None of us can work out the
+solution to the puzzle.  I will leave this journal here to help future
+adventurers, though I am not sure what help it will give.  Good luck!

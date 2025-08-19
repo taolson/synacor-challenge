@@ -1,0 +1,78 @@
+|| Find the path through the vault to reach the target room with weight 30
+
+
+%import <base>
+%import <dequeue>
+%import <io>
+%import <map>
+%import <maybe>
+%import <set>
+
+roomId == int
+move   == (char, roomId)
+op     == int -> int -> int
+
+opr ::= Val int | Op op
+
+room  == (int, opr, [move])
+vault == m_map roomId room
+
+initVault :: vault
+initVault
+    = m_fromList cmproomId . enumerate $
+          [ (0,  Val 22, [('n', 1),  ('e', 14)])
+          , (1,  Op (+), [('n', 2),  ('e', 13)])                 || don't go back to antechamber
+          , (2,  Val 4,  [('n', 3),  ('e', 12), ('s', 1)])
+          , (3,  Op (*), [('e', 4),  ('s', 2)])
+          , (4,  Val 8,  [('e', 5),  ('s', 12), ('w', 3)])
+          , (5,  Op (-), [('e', 15), ('s', 11), ('w', 4)])
+          , (6,  Op (*), [('n', 15), ('s', 7),  ('w', 11)])
+          , (7,  Val 18, [('n', 6),  ('s', 8),  ('w', 10)])
+          , (8,  Op (*), [('n', 7),  ('w', 9)])
+          , (9,  Val 9,  [('n', 10), ('e', 8),  ('w', 14)])
+          , (10, Op (-), [('n', 11), ('e', 7),  ('s', 9),  ('w', 13)])
+          , (11, Val 11, [('n', 5),  ('e', 6),  ('s', 10), ('w', 12)])
+          , (12, Op (*), [('n', 4),  ('e', 11), ('s', 13), ('w', 2)])
+          , (13, Val 4,  [('n', 12), ('e', 10), ('s', 14), ('w', 1)])
+          , (14, Op (-), [('n', 13), ('e', 9)])                 || don't go back to antechamber
+          , (15, Val 1,  [])
+          ]
+
+path     == string
+searchSt == (roomId, int, op, path)
+
+|| custom comparison for searchSt that only includes roomId and weight
+cmpsearchSt :: ordI searchSt
+cmpsearchSt (rid1, weight1, _, _) (rid2, weight2, _, _)
+    = cmpint rid1 rid2 $thenCmp cmpint weight1 weight2
+
+doMove :: searchSt -> move -> searchSt
+doMove (_, weight, op, path) (dir, rid)
+    = case fromJust $ m_lookup cmproomId rid initVault of
+        (_, opr, _) -> case dir : path of
+                         path' -> case opr of
+                                    Val n  -> case op weight n of weight' -> (rid, weight', const, path')
+                                    Op op' -> (rid, weight, op', path')
+
+findPath :: path
+findPath
+    = go (dq_singleton start) s_empty
+      where
+        start = (0, 22, const, [])
+
+        go q seen
+            = dq_viewL q |> fromMaybef err check
+              where
+                err = error "no path found!"
+                check (st, q1)
+                    = reverse path, if rid == 15 & weight == 30
+                    = go q1 seen,   if weight < 0 \/ weight > 2000 \/ s_member cmpsearchSt st seen
+                    = go q2 seen',  otherwise
+                      where
+                        (rid, weight, _, path) = st
+                         (_, _, moves) = fromJust $ m_lookup cmpint rid initVault
+                         seen'         = s_insert cmpsearchSt st seen
+                         q2            = foldl (converse dq_addR) q1 . map (doMove st) $ moves
+
+main :: io ()
+main = putStrLn $ findPath

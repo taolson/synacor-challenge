@@ -1,0 +1,33 @@
+|| Synacor challenge virtual machine disassembler
+
+
+%import <base>
+%import <io>            (>>=)/io_bind
+%import <lens>
+%import <maybe>
+%import <vector>
+%import <maybeState>    (>>=?)/mst_bind (<$>?)/mst_fmap (<|>?)/mst_alt
+%import "arch"
+
+
+disassemble :: memory -> [(int, insn)]
+disassemble mem
+    = fromJust . mst_evalState go $ (0, undef, undef, mem, undef, undef)
+      where
+        go = mst_liftA2 (:) decInsnWord (go <|>? mst_pure [])
+
+        decInsnWord
+            = mst_liftA2 pair (vm_view vm_pc) (decodeInsn <|>? (Word <$>? fetch))
+
+
+main :: io ()
+main
+    = getArgs >>= checkArgs
+      where
+        checkArgs [fn] = readFile fn >>= go
+        checkArgs _ = errStrLn "usage: disassemble <synacor binary file name>"
+
+        printPcInsn (pc, insn)
+            = rpad 6 (showint pc) ++ ": " ++ printInsn insn
+
+        go = makeMemory .> disassemble .> io_mapM_ (printPcInsn .> putStrLn )

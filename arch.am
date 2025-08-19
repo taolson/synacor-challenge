@@ -1,0 +1,263 @@
+|| Synacor challenge virtual machine architecture
+
+
+%export +
+
+%import <base>
+%import <dequeue>
+%import <either>
+%import <lens>
+%import <maybe>
+%import <maybeState>                    (>>=)/mst_bind (<$>)/mst_fmap (<<)/mst_left (>>)/mst_right (<|>)/mst_alt
+%import <vector>
+
+
+|| instruction set
+
+
+int16 ::= Int16 int
+
+i16_fmap :: (int -> int) -> int16 -> int16
+i16_fmap f (Int16 x) = Int16 $ f x .&. 0x7fff
+
+i16_liftA2 :: (int -> int -> int) -> int16 -> int16 -> int16
+i16_liftA2 f (Int16 a) (Int16 b) = Int16 $ f a b .&. 0x7fff
+
+
+|| make a 16-bit int from two character values (little endian)
+makeInt16 :: char -> char -> int16
+makeInt16 lo hi = Int16 $ code hi .<<. 8 .|. code lo
+
+printInt16 :: int16 -> string
+printInt16 (Int16 n) = showint n
+
+reg ::= Reg int
+
+printReg :: reg -> string
+printReg (Reg n) = 'r' : showint n
+
+opr == either reg int16
+
+printOpr :: opr -> string
+printOpr (Left r)  = printReg r
+printOpr (Right n) = printInt16 n
+
+opc == either reg char
+
+printOpc :: opc -> string
+printOpc (Left r)  = printReg r
+printOpc (Right c) = showchar c
+
+insn ::=
+    Halt                |
+    Set reg opr         |
+    Push opr            |
+    Pop  reg            |
+    Eq   reg opr opr    |
+    Gt   reg opr opr    |
+    Jmp  opr            |
+    Jt   opr opr        |
+    Jf   opr opr        |
+    Add  reg opr opr    |
+    Mult reg opr opr    |
+    Mod  reg opr opr    |
+    And  reg opr opr    |
+    Or   reg opr opr    |
+    Not  reg opr        |
+    Rmem reg opr        |
+    Wmem opr opr        |
+    Call opr            |
+    Ret                 |
+    Out  opc            |
+    In   reg            |
+    Nop                 |
+    Word int16                  || a pseudo-insn, not in the instruction set, to designate a data value when disassembling code
+
+|| left-pad a string by a fixed amount
+lpad :: int -> string -> string
+lpad n s
+    = s ++ rep m ' '
+      where
+        m = max2 cmpint 0 (n - #s)
+
+rpad :: int -> string -> string
+rpad n s
+    = rep m ' ' ++ s
+      where
+        m = max2 cmpint 0 (n - #s)
+
+opad = lpad 6
+
+|| printInsn helpers
+
+printROO :: string -> reg -> opr -> opr -> string
+printROO op d s1 s2 = opad op ++ intercalate ", " [printReg d, printOpr s1, printOpr s2]
+
+printRO :: string -> reg -> opr -> string
+printRO op d s = opad op ++ intercalate ", " [printReg d,  printOpr s]
+
+printR :: string -> reg -> string
+printR op d = opad op ++ printReg d
+
+printOO  :: string -> opr -> opr -> string
+printOO op s1 s2 = opad op ++ intercalate ", " [printOpr s1, printOpr s2]
+
+printO  :: string -> opr -> string
+printO op s = opad op ++ printOpr s
+
+printOc :: string -> opc -> string
+printOc op s = opad op ++ printOpc s
+
+printInsn :: insn -> string
+printInsn Halt           = "halt"
+printInsn (Set d s)      = printRO  "set"  d s
+printInsn (Push s)       = printO   "push" s
+printInsn (Pop d)        = printR   "pop"  d
+printInsn (Eq d s1 s2)   = printROO "eq"   d s1 s2
+printInsn (Gt d s1 s2)   = printROO "gt"   d s1 s2
+printInsn (Jmp t)        = printO   "jmp"  t
+printInsn (Jt s t)       = printOO  "jt"   s t
+printInsn (Jf s t)       = printOO  "jf"   s t
+printInsn (Add d s1 s2)  = printROO "add"  d s1 s2
+printInsn (Mult d s1 s2) = printROO "mult" d s1 s2
+printInsn (Mod d s1 s2)  = printROO "mod"  d s1 s2
+printInsn (And d s1 s2)  = printROO "and"  d s1 s2
+printInsn (Or d s1 s2)   = printROO "or"   d s1 s2
+printInsn (Not d s)      = printRO  "not"  d s
+printInsn (Rmem d m)     = printRO  "rmem" d m
+printInsn (Wmem s m)     = printOO  "wmem" s m
+printInsn (Call t)       = printO   "call" t
+printInsn Ret            = "ret"
+printInsn (Out s)        = printOc  "out"  s
+printInsn (In d)         = printR   "in"   d
+printInsn Nop            = "nop"
+printInsn (Word (Int16 x)) = opad ".word" ++ showint x
+
+
+|| vm state
+
+registers == mvector int16
+stack     == [int16]
+memory    == mvector int16
+vmSt      == (int, registers, stack, memory, string, dequeue char)    || pc, regs, stack, mem, inp, out dq
+
+cmpvmSt = undef        || don't derive comparison for vmSt, since dequeue doesn't have a comparison exported
+
+|| lenses for vmSt
+vm_pc  = lensTup6_0
+vm_reg = lensTup6_1
+vm_stk = lensTup6_2
+vm_mem = lensTup6_3
+vm_inp = lensTup6_4
+vm_out = lensTup6_5
+
+|| lift lens operations into vmSt
+vm_view :: lens vmSt * -> maybeState vmSt *
+vm_view lns   st = (Just $ view lns st, st)
+vm_over lns f st = (Just (), over lns f st)
+vm_set  lns x st = (Just (), set lns x st)
+
+
+|| register operations
+readOpr :: opr -> maybeState vmSt int16
+readOpr (Left (Reg r)) = vm_view vm_reg >>= read where read regs = mst_lift (v_unsafeRead regs r)
+readOpr (Right n)      = mst_pure n
+
+readOpc :: opc -> maybeState vmSt char
+readOpc (Left (Reg r)) = vm_view vm_reg >>= read >>= mkChar where read regs = mst_lift (v_unsafeRead regs r); mkChar (Int16 n) = mst_pure $ decode n
+readOpc (Right c)      = mst_pure c
+
+writeReg :: reg -> int16 -> maybeState vmSt ()
+writeReg (Reg r) x = vm_view vm_reg >>= write where write regs = mst_lift (v_unsafeWrite regs r x)
+
+
+|| memory operations
+readMem :: int16 -> maybeState vmSt int16
+readMem (Int16 a) = vm_view vm_mem >>= read where read mem = mst_lift (v_unsafeRead mem a)
+
+writeMem :: int16 -> int16 -> maybeState vmSt ()
+writeMem (Int16 a) x = vm_view vm_mem >>= write where write mem = mst_lift (v_unsafeWrite mem a x)
+
+
+|| stack operations
+popStk :: maybeState vmSt int16
+popStk
+    = vm_view vm_stk >>= pop
+      where
+        pop []       = mst_fail
+        pop (x : xs) = vm_set vm_stk xs >> mst_pure x
+
+pushStk :: int16 -> maybeState vmSt ()
+pushStk n = vm_over vm_stk (n :)
+
+
+|| decoding insns from memory
+
+|| fetch a value from memory, incrementing the pc
+fetch :: maybeState vmSt int16
+fetch
+    = mst_bind2 (vm_view vm_mem) (vm_view vm_pc) checkRead
+      where checkRead mem pc
+        = (mst_lift $ v_unsafeRead mem pc) << vm_over vm_pc (+ 1), if pc < v_mlength mem
+        = mst_fail,                                                otherwise
+
+|| make a reg from an int16
+makeReg :: int16 -> maybeState vmSt reg
+makeReg (Int16 n)
+    = mst_pure . Reg $ (n .&. 7), if 0x8000 <= n < 0x8008
+    = mst_fail,                   otherwise
+
+|| decode a reg from memory
+decodeReg :: maybeState vmSt reg
+decodeReg = fetch >>= makeReg
+
+|| make a char from an int16
+makeChar :: int16 -> maybeState vmSt char
+makeChar (Int16 n)
+    = mst_pure . decode $ n, if 0 <= n < 0x7f
+    = mst_fail,              otherwise
+
+|| decode an operand from memory
+decodeOpr :: maybeState vmSt opr
+decodeOpr
+    = fetch >>= go
+      where
+        go n = (Left <$> makeReg n) <|> (Right <$> mst_pure n)
+
+decodeOpc :: maybeState vmSt opc
+decodeOpc
+    = fetch >>= go
+      where
+        go n = (Left <$> makeReg n) <|> (Right <$> makeChar n)
+
+|| decode helpers
+dROO op = mst_liftA3 op decodeReg decodeOpr decodeOpr
+dRO  op = mst_liftA2 op decodeReg decodeOpr
+dR   op =            op <$> decodeReg
+dOO  op = mst_liftA2 op decodeOpr decodeOpr
+dO   op =            op <$> decodeOpr
+dOc  op =            op <$> decodeOpc
+
+decoders :: vector (maybeState vmSt insn)
+decoders = v_fromList [mst_pure Halt, dRO Set, dO Push, dR Pop, dROO Eq, dROO Gt, dO Jmp, dOO Jt, dOO Jf, dROO Add, dROO Mult,
+                       dROO Mod, dROO And, dROO Or, dRO Not, dRO Rmem, dOO Wmem, dO Call, mst_pure Ret, dOc Out, dR In, mst_pure Nop]
+
+decodeInsn :: maybeState vmSt insn
+decodeInsn
+    = fetch >>= check
+      where
+        check (Int16 n)
+            = decoders !! n, if 0 <= n <= 21
+            = mst_fail,      otherwise
+
+|| memory is architecturally defined as 32K words, so we allocate all 32K (initialized with 0), then
+|| fill from the binary
+makeMemory :: string -> memory
+makeMemory s
+    = v_unsafeThaw $ initMem // prog
+      where
+        initMem = Int16 0 |> v_rep 0x8000
+        prog    = pairWise s |> map (uncurry makeInt16) |> enumerate
+
+        pairWise (a : b : xs) = (a, b) : pairWise xs
+        pairWise _            = []

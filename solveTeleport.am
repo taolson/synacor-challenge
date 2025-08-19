@@ -1,0 +1,68 @@
+|| Solve magic code for teleport in Synacor Challenge
+|| Verification uses a modified Ackerman function which should return 6 for the correct magic code
+
+
+%import <base>
+%import <io>
+%import <lens>
+%import <vector>
+%import <state> (>>=)/st_bind (>>)/st_right
+
+
+buffer  == mvector int
+ackerSt == (buffer, buffer)
+
+buf0 = lensFst
+buf1 = lensSnd
+
+st_view lns st = (view lns st, st)
+
+|| run the modified acker 4 1 x, using the buffer pair state to memoize the intermediate acker calculations
+doAcker :: lens ackerSt buffer -> lens ackerSt buffer -> int -> state ackerSt ()
+doAcker src dst (I# x#)
+    = st_bind2 (st_view src) (st_view dst) initBuf
+      where
+        initBuf (MVector (I# n#) vs#) (MVector _ vd#)
+            = go 0# x#
+              where
+                go i# t#
+                    = case i# $cmp# n# of
+                        1# -> case readArray# vs# t# of
+                                t' -> case writeArray# vd# i# t' of
+                                        _ -> case i# +# 1# of
+                                               i'# -> case t' of
+                                                        I# t'# -> go i'# t'#
+
+                         _ -> st_pure ()
+
+acker41 :: int -> state ackerSt int
+acker41 x
+    = (st_view buf0 >>= initAcker) >>
+      doAcker buf0 buf1 x          >>
+      doAcker buf1 buf0 x          >>
+      (st_view buf0 >>= get2)
+      where
+        get2 v      = v_read v x >>= v_read v
+        initAcker v = v_unsafeReplace v $ [(i, (x + i + 1) .&. 0x7fff) | i <- [0 ..  v_mlength v - 1]]
+
+|| given a starting magic code, try successive ones until an acker41 value of 6 occurs
+solve :: int -> io int
+solve
+    = go
+      where
+        buf0 = v_unsafeThaw $ v_rep 32768 0
+        buf1 = v_unsafeThaw $ v_rep 32768 0
+
+        go x
+            = check $ st_evalState (acker41 x) (buf0, buf1)
+              where
+              check x'
+                  = io_pure x,                if x' == 6
+                  = statusMsg >> go (x + 1), otherwise
+                    where
+                      statusMsg = putStrLn (showint x ++ ": " ++ showint x')
+
+main :: io ()
+main = solve 25000 >>= printCode
+       where
+         printCode code = putStrLn $ "code: " ++ showint code

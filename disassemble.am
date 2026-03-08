@@ -28,6 +28,6 @@ main
         checkArgs _ = errStrLn "usage: disassemble <synacor binary file name>"
 
         printPcInsn (pc, insn)
-            = rpad 6 (showint pc) ++ ": " ++ printInsn insn
+            = padr 6 (showint pc) ++ ": " ++ printInsn insn
 
         go = makeMemory .> disassemble .> io_mapM_ (printPcInsn .> putStrLn )

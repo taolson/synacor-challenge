@@ -73,40 +73,28 @@ insn ::=
     Nop                 |
     Word int16                  || a pseudo-insn, not in the instruction set, to designate a data value when disassembling code
 
-|| left-pad a string by a fixed amount
-lpad :: int -> string -> string
-lpad n s
-    = s ++ rep m ' '
-      where
-        m = max2 cmpint 0 (n - #s)
-
-rpad :: int -> string -> string
-rpad n s
-    = rep m ' ' ++ s
-      where
-        m = max2 cmpint 0 (n - #s)
-
-opad = lpad 6
+padOp :: string -> string
+padOp = padR 6
 
 || printInsn helpers
 
 printROO :: string -> reg -> opr -> opr -> string
-printROO op d s1 s2 = opad op ++ intercalate ", " [printReg d, printOpr s1, printOpr s2]
+printROO op d s1 s2 = padOp op ++ intercalate ", " [printReg d, printOpr s1, printOpr s2]
 
 printRO :: string -> reg -> opr -> string
-printRO op d s = opad op ++ intercalate ", " [printReg d,  printOpr s]
+printRO op d s = padOp op ++ intercalate ", " [printReg d,  printOpr s]
 
 printR :: string -> reg -> string
-printR op d = opad op ++ printReg d
+printR op d = padOp op ++ printReg d
 
 printOO  :: string -> opr -> opr -> string
-printOO op s1 s2 = opad op ++ intercalate ", " [printOpr s1, printOpr s2]
+printOO op s1 s2 = padOp op ++ intercalate ", " [printOpr s1, printOpr s2]
 
 printO  :: string -> opr -> string
-printO op s = opad op ++ printOpr s
+printO op s = padOp op ++ printOpr s
 
 printOc :: string -> opc -> string
-printOc op s = opad op ++ printOpc s
+printOc op s = padOp op ++ printOpc s
 
 printInsn :: insn -> string
 printInsn Halt           = "halt"
@@ -131,7 +119,7 @@ printInsn Ret            = "ret"
 printInsn (Out s)        = printOc  "out"  s
 printInsn (In d)         = printR   "in"   d
 printInsn Nop            = "nop"
-printInsn (Word (Int16 x)) = opad ".word" ++ showint x
+printInsn (Word (Int16 x)) = padOp ".word" ++ showint x
 
 
 || vm state
@@ -160,23 +148,23 @@ vm_set  lns x st = (Just (), set lns x st)
 
 || register operations
 readOpr :: opr -> maybeState vmSt int16
-readOpr (Left (Reg r)) = vm_view vm_reg >>= read where read regs = mst_lift (v_unsafeRead regs r)
+readOpr (Left (Reg r)) = vm_view vm_reg >>= \regs -> mst_lift (v_unsafeRead regs r)
 readOpr (Right n)      = mst_pure n
 
 readOpc :: opc -> maybeState vmSt char
-readOpc (Left (Reg r)) = vm_view vm_reg >>= read >>= mkChar where read regs = mst_lift (v_unsafeRead regs r); mkChar (Int16 n) = mst_pure $ decode n
+readOpc (Left (Reg r)) = vm_view vm_reg >>= \regs -> mst_lift (v_unsafeRead regs r) >>= \(Int16 n) -> mst_pure $ decode n
 readOpc (Right c)      = mst_pure c
 
 writeReg :: reg -> int16 -> maybeState vmSt ()
-writeReg (Reg r) x = vm_view vm_reg >>= write where write regs = mst_lift (v_unsafeWrite regs r x)
+writeReg (Reg r) x = vm_view vm_reg >>= \regs -> mst_lift (v_unsafeWrite regs r x)
 
 
 || memory operations
 readMem :: int16 -> maybeState vmSt int16
-readMem (Int16 a) = vm_view vm_mem >>= read where read mem = mst_lift (v_unsafeRead mem a)
+readMem (Int16 a) = vm_view vm_mem >>= \mem -> mst_lift (v_unsafeRead mem a)
 
 writeMem :: int16 -> int16 -> maybeState vmSt ()
-writeMem (Int16 a) x = vm_view vm_mem >>= write where write mem = mst_lift (v_unsafeWrite mem a x)
+writeMem (Int16 a) x = vm_view vm_mem >>= \mem -> mst_lift (v_unsafeWrite mem a x)
 
 
 || stack operations
@@ -219,16 +207,10 @@ makeChar (Int16 n)
 
 || decode an operand from memory
 decodeOpr :: maybeState vmSt opr
-decodeOpr
-    = fetch >>= go
-      where
-        go n = (Left <$> makeReg n) <|> (Right <$> mst_pure n)
+decodeOpr = fetch >>= \n -> (Left <$> makeReg n) <|> (Right <$> mst_pure n)
 
 decodeOpc :: maybeState vmSt opc
-decodeOpc
-    = fetch >>= go
-      where
-        go n = (Left <$> makeReg n) <|> (Right <$> makeChar n)
+decodeOpc = fetch >>= \n -> (Left <$> makeReg n) <|> (Right <$> makeChar n)
 
 || decode helpers
 dROO op = mst_liftA3 op decodeReg decodeOpr decodeOpr

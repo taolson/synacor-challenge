@@ -15,8 +15,6 @@ ackerSt == (buffer, buffer)
 buf0 = lensFst
 buf1 = lensSnd
 
-st_view lns st = (view lns st, st)
-
 || run the modified acker 4 1 x, using the buffer pair state to memoize the intermediate acker calculations
 doAcker :: lens ackerSt buffer -> lens ackerSt buffer -> int -> state ackerSt ()
 doAcker src dst (I# x#)

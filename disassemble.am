@@ -6,18 +6,18 @@
 %import <lens>
 %import <maybe>
 %import <vector>
-%import <maybeState>    (>>=?)/mst_bind (<$>?)/mst_fmap (<|>?)/mst_alt
+%import <maybeState>    (<$>)/mst_fmap (<|>)/mst_alt
 %import "arch"
 
 
 disassemble :: memory -> [(int, insn)]
 disassemble mem
-    = fromJust . mst_evalState go $ (0, undef, undef, mem, undef, undef)
+    = mst_evalState go (0, undef, undef, mem, undef, undef) |> fromJust
       where
-        go = mst_liftA2 (:) decInsnWord (go <|>? mst_pure [])
+        go = mst_liftA2 (:) decInsnWord (go <|> mst_pure [])
 
         decInsnWord
-            = mst_liftA2 pair (vm_view vm_pc) (decodeInsn <|>? (Word <$>? fetch))
+            = mst_liftA2 pair (vm_view vm_pc) (decodeInsn <|> (Word <$> fetch))
 
 
 main :: io ()

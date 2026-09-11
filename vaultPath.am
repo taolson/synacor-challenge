@@ -2,11 +2,11 @@
 
 
 %import <base>
-%import <dequeue>
+%import <dequeue>       as dq
 %import <io>
-%import <map>
+%import <map>           qualified as m
 %import <maybe>
-%import <set>
+%import <set>           qualified as s
 
 roomId == int
 move   == (char, roomId)
@@ -15,11 +15,11 @@ op     == int -> int -> int
 opr ::= Val int | Op op
 
 room  == (int, opr, [move])
-vault == m_map roomId room
+vault == m.map roomId room
 
 initVault :: vault
 initVault
-    = m_fromList cmproomId . enumerate $
+    = m.fromList cmproomId . enumerate $
           [ (0,  Val 22, [('n', 1),  ('e', 14)])
           , (1,  Op (+), [('n', 2),  ('e', 13)])                 || don't go back to antechamber
           , (2,  Val 4,  [('n', 3),  ('e', 12), ('s', 1)])
@@ -48,7 +48,7 @@ cmpsearchSt (rid1, weight1, _, _) (rid2, weight2, _, _)
 
 doMove :: searchSt -> move -> searchSt
 doMove (_, weight, op, path) (dir, rid)
-    = case fromJust $ m_lookup cmproomId rid initVault of
+    = case fromJust $ m.lookup cmproomId rid initVault of
         (_, opr, _) -> case dir : path of
                          path' -> case opr of
                                     Val n  -> case op weight n of weight' -> (rid, weight', const, path')
@@ -56,23 +56,23 @@ doMove (_, weight, op, path) (dir, rid)
 
 findPath :: path
 findPath
-    = go (dq_singleton start) s_empty
+    = go (dq.singleton start) s.empty
       where
         start = (0, 22, const, [])
 
         go q seen
-            = dq_viewL q |> fromMaybef err check
+            = dq.viewL q |> fromMaybef err check
               where
                 err = error "no path found!"
                 check (st, q1)
                     = reverse path, if rid == 15 & weight == 30
-                    = go q1 seen,   if weight < 0 \/ weight > 2000 \/ s_member cmpsearchSt st seen
+                    = go q1 seen,   if weight < 0 \/ weight > 2000 \/ s.member cmpsearchSt st seen
                     = go q2 seen',  otherwise
                       where
                         (rid, weight, _, path) = st
-                         (_, _, moves) = fromJust $ m_lookup cmpint rid initVault
-                         seen'         = s_insert cmpsearchSt st seen
-                         q2            = foldl (converse dq_addR) q1 . map (doMove st) $ moves
+                         (_, _, moves) = fromJust $ m.lookup cmpint rid initVault
+                         seen'         = s.insert cmpsearchSt st seen
+                         q2            = foldl (converse dq.addR) q1 . map (doMove st) $ moves
 
 main :: io ()
 main = putStrLn $ findPath

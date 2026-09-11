@@ -2,22 +2,20 @@
 
 
 %import <base>
-%import <io>            (>>=)/io_bind
-%import <lens>
-%import <maybe>
-%import <vector>
-%import <maybeState>    (<$>)/mst_fmap (<|>)/mst_alt
+%import <io>                    -(<$>)
+%import <maybe>                 -(>>=) -(<$>) -(<|>)
+%import <maybeState>    as mst  -(>>=)
 %import "arch"
 
 
 disassemble :: memory -> [(int, insn)]
 disassemble mem
-    = mst_evalState go (0, undef, undef, mem, undef, undef) |> fromJust
+    = mst.evalState go (0, undef, undef, mem, undef, undef) |> fromJust
       where
-        go = mst_liftA2 (:) decInsnWord (go <|> mst_pure [])
+        go = mst.liftA2 (:) decInsnWord (go <|> mst.pure [])
 
         decInsnWord
-            = mst_liftA2 pair (vm_view vm_pc) (decodeInsn <|> (Word <$> fetch))
+            = mst.liftA2 pair (mst.view vm_pc) (decodeInsn <|> (Word <$> fetch))
 
 
 main :: io ()
@@ -30,4 +28,4 @@ main
         printPcInsn (pc, insn)
             = padL 6 (showint pc) ++ ": " ++ printInsn insn
 
-        go = makeMemory .> disassemble .> io_mapM_ (printPcInsn .> putStrLn )
+        go = makeMemory .> disassemble .> io.mapM_ (printPcInsn .> putStrLn )

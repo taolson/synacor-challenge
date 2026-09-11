@@ -4,12 +4,11 @@
 %export +
 
 %import <base>
-%import <dequeue>
-%import <either>
-%import <lens>
-%import <maybe>
-%import <maybeState>                    (>>=)/mst_bind (<$>)/mst_fmap (<<)/mst_left (>>)/mst_right (<|>)/mst_alt
-%import <vector>
+%import <either>                -pure -(>>=) -(<$>) -(<<) -(>>) -liftA2
+%import <lens>                  -view -over -set
+%import <maybe>                 -pure -(>>=) -(<$>) -(<<) -(>>) -(<|>) -liftA2
+%import <maybeState>
+%import <vector>        as v    -(<$>)
 
 
 || instruction set
@@ -23,6 +22,9 @@ i16_fmap f (Int16 x) = Int16 $ f x .&. 0x7fff
 i16_liftA2 :: (int -> int -> int) -> int16 -> int16 -> int16
 i16_liftA2 f (Int16 a) (Int16 b) = Int16 $ f a b .&. 0x7fff
 
+
+i16_val :: int16 -> int
+i16_val (Int16 x) = x
 
 || make a 16-bit int from two character values (little endian)
 makeInt16 :: char -> char -> int16
@@ -124,59 +126,59 @@ printInsn (Word (Int16 x)) = padOp ".word" ++ showint x
 
 || vm state
 
+|| execution status
+status ::= Running | Halted | ReqIn | ReqOut
+
+cmpstatus = undef       || don't derive cmpstatus because dequeue doesn't export cmp
+
 registers == mvector int16
 stack     == [int16]
 memory    == mvector int16
-vmSt      == (int, registers, stack, memory, string, dequeue char)    || pc, regs, stack, mem, inp, out dq
+vmSt      == (status, int, registers, stack, memory, string, string)    || status, pc, regs, stack, mem, inp, out
 
 cmpvmSt = undef        || don't derive comparison for vmSt, since dequeue doesn't have a comparison exported
 
 || lenses for vmSt
-vm_pc  = lensTup6_0
-vm_reg = lensTup6_1
-vm_stk = lensTup6_2
-vm_mem = lensTup6_3
-vm_inp = lensTup6_4
-vm_out = lensTup6_5
-
-|| lift lens operations into vmSt
-vm_view :: lens vmSt * -> maybeState vmSt *
-vm_view lns   st = (Just $ view lns st, st)
-vm_over lns f st = (Just (), over lns f st)
-vm_set  lns x st = (Just (), set lns x st)
+vm_stat = lensTup7_0
+vm_pc   = lensTup7_1
+vm_reg  = lensTup7_2
+vm_stk  = lensTup7_3
+vm_mem  = lensTup7_4
+vm_inp  = lensTup7_5
+vm_out  = lensTup7_6
 
 
 || register operations
 readOpr :: opr -> maybeState vmSt int16
-readOpr (Left (Reg r)) = vm_view vm_reg >>= \regs -> mst_lift (v_unsafeRead regs r)
-readOpr (Right n)      = mst_pure n
+readOpr (Left (Reg r)) = view vm_reg >>= \regs -> liftState (unsafeRead regs r)
+readOpr (Right n)      = pure n
 
 readOpc :: opc -> maybeState vmSt char
-readOpc (Left (Reg r)) = vm_view vm_reg >>= \regs -> mst_lift (v_unsafeRead regs r) >>= \(Int16 n) -> mst_pure $ decode n
-readOpc (Right c)      = mst_pure c
+readOpc (Left (Reg r)) = view vm_reg >>= \regs -> liftState (unsafeRead regs r) >>= \(Int16 n) -> pure $ decode n
+readOpc (Right c)      = pure c
 
 writeReg :: reg -> int16 -> maybeState vmSt ()
-writeReg (Reg r) x = vm_view vm_reg >>= \regs -> mst_lift (v_unsafeWrite regs r x)
+writeReg (Reg r) x = view vm_reg >>= \regs -> liftState (unsafeWrite regs r x)
 
 
 || memory operations
 readMem :: int16 -> maybeState vmSt int16
-readMem (Int16 a) = vm_view vm_mem >>= \mem -> mst_lift (v_unsafeRead mem a)
+readMem (Int16 a) = view vm_mem >>= \mem -> liftState(unsafeRead mem a)
 
 writeMem :: int16 -> int16 -> maybeState vmSt ()
-writeMem (Int16 a) x = vm_view vm_mem >>= \mem -> mst_lift (v_unsafeWrite mem a x)
+writeMem (Int16 a) x = view vm_mem >>= \mem -> liftState(unsafeWrite mem a x)
 
 
 || stack operations
 popStk :: maybeState vmSt int16
 popStk
-    = vm_view vm_stk >>= pop
+    = view vm_stk >>= pop
       where
-        pop []       = mst_fail
-        pop (x : xs) = vm_set vm_stk xs >> mst_pure x
+        pop []       = fail
+        pop (x : xs) = set vm_stk xs >> pure x
 
 pushStk :: int16 -> maybeState vmSt ()
-pushStk n = vm_over vm_stk (n :)
+pushStk n = over vm_stk (n :)
 
 
 || decoding insns from memory
@@ -184,16 +186,16 @@ pushStk n = vm_over vm_stk (n :)
 || fetch a value from memory, incrementing the pc
 fetch :: maybeState vmSt int16
 fetch
-    = mst_bind2 (vm_view vm_mem) (vm_view vm_pc) checkRead
+    = bind2 (view vm_mem) (view vm_pc) checkRead
       where checkRead mem pc
-        = (mst_lift $ v_unsafeRead mem pc) << vm_over vm_pc (+ 1), if pc < v_mlength mem
-        = mst_fail,                                                otherwise
+        = (liftState $ unsafeRead mem pc) << over vm_pc (+ 1), if pc < mlength mem
+        = fail,                                                      otherwise
 
 || make a reg from an int16
 makeReg :: int16 -> maybeState vmSt reg
 makeReg (Int16 n)
-    = mst_pure . Reg $ (n .&. 7), if 0x8000 <= n < 0x8008
-    = mst_fail,                   otherwise
+    = pure . Reg $ (n .&. 7), if 0x8000 <= n < 0x8008
+    = fail,                   otherwise
 
 || decode a reg from memory
 decodeReg :: maybeState vmSt reg
@@ -202,27 +204,27 @@ decodeReg = fetch >>= makeReg
 || make a char from an int16
 makeChar :: int16 -> maybeState vmSt char
 makeChar (Int16 n)
-    = mst_pure . decode $ n, if 0 <= n < 0x7f
-    = mst_fail,              otherwise
+    = pure . decode $ n, if 0 <= n < 0x7f
+    = fail,              otherwise
 
 || decode an operand from memory
 decodeOpr :: maybeState vmSt opr
-decodeOpr = fetch >>= \n -> (Left <$> makeReg n) <|> (Right <$> mst_pure n)
+decodeOpr = fetch >>= \n -> (Left <$> makeReg n) <|> (Right <$> pure n)
 
 decodeOpc :: maybeState vmSt opc
 decodeOpc = fetch >>= \n -> (Left <$> makeReg n) <|> (Right <$> makeChar n)
 
 || decode helpers
-dROO op = mst_liftA3 op decodeReg decodeOpr decodeOpr
-dRO  op = mst_liftA2 op decodeReg decodeOpr
+dROO op = liftA3 op decodeReg decodeOpr decodeOpr
+dRO  op = liftA2 op decodeReg decodeOpr
 dR   op =            op <$> decodeReg
-dOO  op = mst_liftA2 op decodeOpr decodeOpr
+dOO  op = liftA2 op decodeOpr decodeOpr
 dO   op =            op <$> decodeOpr
 dOc  op =            op <$> decodeOpc
 
 decoders :: vector (maybeState vmSt insn)
-decoders = v_fromList [mst_pure Halt, dRO Set, dO Push, dR Pop, dROO Eq, dROO Gt, dO Jmp, dOO Jt, dOO Jf, dROO Add, dROO Mult,
-                       dROO Mod, dROO And, dROO Or, dRO Not, dRO Rmem, dOO Wmem, dO Call, mst_pure Ret, dOc Out, dR In, mst_pure Nop]
+decoders = v.fromList [pure Halt, dRO Set, dO Push, dR Pop, dROO Eq, dROO Gt, dO Jmp, dOO Jt, dOO Jf, dROO Add, dROO Mult,
+                       dROO Mod, dROO And, dROO Or, dRO Not, dRO Rmem, dOO Wmem, dO Call, pure Ret, dOc Out, dR In, pure Nop]
 
 decodeInsn :: maybeState vmSt insn
 decodeInsn
@@ -230,15 +232,15 @@ decodeInsn
       where
         check (Int16 n)
             = decoders !! n, if 0 <= n <= 21
-            = mst_fail,      otherwise
+            = fail,      otherwise
 
 || memory is architecturally defined as 32K words, so we allocate all 32K (initialized with 0), then
 || fill from the binary
 makeMemory :: string -> memory
 makeMemory s
-    = v_unsafeThaw $ initMem // prog
+    = unsafeThaw $ initMem // prog
       where
-        initMem = Int16 0 |> v_rep 0x8000
+        initMem = Int16 0 |> v.rep 0x8000
         prog    = pairWise s |> map (uncurry makeInt16) |> enumerate
 
         pairWise (a : b : xs) = (a, b) : pairWise xs

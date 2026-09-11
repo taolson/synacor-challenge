@@ -1,7 +1,7 @@
 || extract the codes from the output of the vm evaluation of challenge.bin
 
 %import <base>
-%import <io>                    (>>=)/io_bind
+%import <io>
 
 main :: io ()
 main = getContents >>= words .> map (filter letter) .> filter isCode .> nub cmpstring .> lay .> putStrLn

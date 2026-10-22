@@ -10,7 +10,7 @@
 
 disassemble :: memory -> [(int, insn)]
 disassemble mem
-    = mst.evalState go (0, undef, undef, mem, undef, undef) |> fromJust
+    = mst.evalState go (Halted, 0, undef, undef, mem, undef, undef) |> fromJust
       where
         go = mst.liftA2 (:) decInsnWord (go <|> mst.pure [])
 
